@@ -1,0 +1,24 @@
+---
+
+- name: Download cctools archive
+  get_url:
+    url: "{{ URL }}"
+    dest: "/tmp/cctools.tar.gz"
+
+- name: Unarchive cctools
+  unarchive:
+    src: "/tmp/cctools.tar.gz"
+    dest: "/tmp"
+    remote_src: yes
+
+- name: Configure Makefile
+  command: ./configure chdir="/tmp/cctools-6.1.1-source"
+
+- name: Build from source
+  make:
+    chdir: "/tmp/cctools-6.1.1-source"
+
+- name: Install binaries
+  make:
+    chdir: "/tmp/cctools-6.1.1-source"
+    target: "install"
