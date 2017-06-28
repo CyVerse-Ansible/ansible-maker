@@ -1,24 +1,90 @@
 ---
 
-- name: Download cctools archive
-  get_url:
-    url: "{{ URL }}"
-    dest: "/tmp/cctools.tar.gz"
+- name: Install cpanm on Ubuntu
+  package:
+    name: "cpanminus"
+    state: present
+  when: ansible_distribution == "Ubuntu"
 
-- name: Unarchive cctools
-  unarchive:
-    src: "/tmp/cctools.tar.gz"
-    dest: "/tmp"
-    remote_src: yes
+- block:
+  - name: Install Perl-CPAN on CentOS
+    package:
+      name: "perl-CPAN.x86_64"
+      state: present
 
-- name: Configure Makefile
-  command: ./configure chdir="/tmp/cctools-6.1.1-source"
+  - name: Install cpanm CentOS
+    shell: >
+      curl -L http://cpanmin.us | perl - App::cpanminus
+  when: ansible_distribution == "CentOS"
 
-- name: Build from source
-  make:
-    chdir: "/tmp/cctools-6.1.1-source"
+- name: Create MAKER home dir
+  file:
+    path: "{{ MAKER_HOME }}"
+    state: directory
 
-- name: Install binaries
-  make:
-    chdir: "/tmp/cctools-6.1.1-source"
-    target: "install"
+- name: Install perl libraries
+  cpanm:
+    name: "{{ item }}"
+    use_sudo: yes
+    notest: yes
+  with_items:
+    - DBI
+    - DBD::SQLite
+    - Proc::ProcessTable
+    - threads
+    - IO::All
+    - IO::Prompt
+    - PerlIO::gzip
+    - File::Which
+    - Perl::Unsafe::Signals
+    - Bit::Vector
+    - Inline::C
+    - Module::Build
+    - Bio::Root::Version
+    - forks
+    - forks::shared
+
+- name: Install BioPerl
+  cpanm:
+    name: "Bundle::BioPerl"
+
+- tags: maker
+  block:
+    - block:
+      - name: Download MAKER
+        get_url:
+          url: "{{ MAKER_URL }}"
+          dest: "{{ MAKER_HOME }}/maker-2.3.19.tgz"
+
+      - name: Unarchive MAKER
+        unarchive:
+          src: "{{ MAKER_HOME }}/maker-2.31.9.tgz"
+          dest: "{{ MAKER_HOME }}"
+          remote_src: yes
+      when: MAKER_URL is defined
+
+    - name: Copy and unarchive MAKER
+      unarchive:
+        src: "files/{{ MAKER_FILE }}"
+        dest: "{{ MAKER_HOME }}"
+      when: MAKER_FILE is defined
+
+    - name: Configure MAKER
+      command: "perl Build.PL"
+      args:
+        chdir: "{{ MAKER_HOME }}/maker/src"
+
+    - name: Install MAKER
+      command: "./Build install"
+      args:
+        chdir: "{{ MAKER_HOME }}/maker/src"
+      environment:
+        ZOE: "{{ MAKER_HOME }}/snap/Zoe"
+        AUGUSTUS_CONFIG_PATH: "{{ MAKER_HOME }}/augustus/config"
+
+    - name: Add MAKER to $PATH by adding line to bashrc
+      lineinfile:
+        path: "/home/{{ ATMOUSERNAME }}/.bashrc"
+        line: "export PATH=\"{{ MAKER_HOME }}/maker/bin:$PATH\""
+        state: present
+        insertafter: EOF

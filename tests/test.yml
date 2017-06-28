@@ -1,7 +1,0 @@
----
-
-- name: Playbook to install cctools
-  hosts: localhost
-  remote_user: root
-  roles:
-    - ansible-cctools

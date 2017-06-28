@@ -1,1 +1,5 @@
-URL: "http://ccl.cse.nd.edu/software/files/cctools-6.1.1-source.tar.gz"
+---
+
+MAKER_URL:
+MAKER_HOME: "/home/MAKER"
+MAKER_FILE: "maker-2.31.9.tgz"
